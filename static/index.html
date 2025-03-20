@@ -1,26 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ome.tv Clone</title>
-    <link rel="stylesheet" href="style.css">
+    <title>OmeG - WebRTC Video</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
-
 <body>
-    <h1>Random Video Chat</h1>
-    <video id="localVideo" autoplay playsinline muted></video>
+    <h1>OmeG - Random Video Chat</h1>
+    <video id="localVideo" autoplay playsinline></video>
     <video id="remoteVideo" autoplay playsinline></video>
-    <button id="startChat">Start Chat</button>
-    <script src="script.js"></script>
-    <script>
-        if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("/sw.js").then(() => {
-                console.log("Service Worker Registered!");
-            });
-        }
-    </script>
+    <script src="/static/script.js"></script>
 </body>
-
 </html>

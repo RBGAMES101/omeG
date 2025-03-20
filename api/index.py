@@ -1,25 +1,19 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 import json
-import os
 
 app = FastAPI()
 
-# Enable CORS for frontend requests
+# CORS to allow frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (change to your frontend URL for security)
+    allow_origins=["*"],  # Change this to your frontend domain for security
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-clients = set()  # Active WebSocket connections
-
-@app.get("/")
-async def serve_index():
-    return FileResponse(os.path.join("static", "index.html"))
+clients = set()  # Store WebRTC clients
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -31,11 +25,11 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             message = json.loads(data)
 
-            # Relay offer/answer/ICE candidates to a random user
+            # Relay WebRTC signaling messages to other clients
             for client in clients:
                 if client != websocket:
                     await client.send_text(json.dumps(message))
-                    break  # Only send to one user at a time
+                    break  # Send only to one other client
 
     except:
         clients.remove(websocket)
