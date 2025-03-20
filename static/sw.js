@@ -1,16 +1,16 @@
-const CACHE_NAME = "OMEG";
-const URLS_TO_CACHE = [
+const CACHE_NAME = "omeG-cache-v1";
+const urlsToCache = [
     "/",
     "/static/index.html",
     "/static/style.css",
     "/static/script.js"
 ];
 
-// Install service worker and cache files
+// Install service worker and cache resources
 self.addEventListener("install", (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(URLS_TO_CACHE);
+            return cache.addAll(urlsToCache);
         })
     );
 });
