@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import json
+import os
 
 app = FastAPI()
 
@@ -14,6 +15,9 @@ app.add_middleware(
 )
 
 clients = set()  # Store active WebSocket clients
+@app.get("/")
+async def serve_index():
+    return FileResponse(os.path.join("static", "index.html"))
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
