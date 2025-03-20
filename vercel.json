@@ -14,6 +14,7 @@
     { "src": "/api/.*", "dest": "/api/index.py" },
     { "src": "/sw.js", "dest": "/static/sw.js" },
     { "src": "/static/(.*)", "dest": "/static/$1" },
-    { "src": "/(.*)", "dest": "/static/index.html" }
+    { "src": "/(.*)", "dest": "/static/$1" },
+    { "src": "/", "dest": "/static/index.html" }
   ]
 }

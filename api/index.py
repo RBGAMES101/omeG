@@ -1,20 +1,22 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 import json
 import os
 
 app = FastAPI()
 
-# Allow frontend to connect
+# Enable CORS for frontend requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change this to your frontend URL for security
+    allow_origins=["*"],  # Allow all origins (change to your frontend URL for security)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-clients = set()  # Store active WebSocket clients
+clients = set()  # Active WebSocket connections
+
 @app.get("/")
 async def serve_index():
     return FileResponse(os.path.join("static", "index.html"))
@@ -33,7 +35,7 @@ async def websocket_endpoint(websocket: WebSocket):
             for client in clients:
                 if client != websocket:
                     await client.send_text(json.dumps(message))
-                    break  # Send to one random user only
+                    break  # Only send to one user at a time
 
     except:
         clients.remove(websocket)
