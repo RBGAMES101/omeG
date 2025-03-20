@@ -1,38 +1,51 @@
-const startButton = document.getElementById("start");
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
+const startChat = document.getElementById("startChat");
 
-let pc = new RTCPeerConnection();
+let peerConnection;
 let socket = new WebSocket("wss://" + window.location.host + "/api/ws");
+let localStream;
 
-// Store signaling data in localStorage (Fallback)
+// STUN server for WebRTC
+const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
 socket.onmessage = async (event) => {
-    let data = JSON.parse(event.data);
-    localStorage.setItem("signaling", JSON.stringify(data));
-    if (data.match) {
-        let offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        socket.send(JSON.stringify({ offer }));
-    } else if (data.answer) {
-        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+    let message = JSON.parse(event.data);
+
+    if (message.offer) {
+        peerConnection = new RTCPeerConnection(config);
+        addTracks();
+        peerConnection.setRemoteDescription(new RTCSessionDescription(message.offer));
+        let answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.send(JSON.stringify({ answer: answer }));
+    } 
+    else if (message.answer) {
+        peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+    } 
+    else if (message.iceCandidate) {
+        peerConnection.addIceCandidate(new RTCIceCandidate(message.iceCandidate));
     }
 };
 
-// If server is down, load previous signaling data
-if (!navigator.onLine) {
-    let savedData = localStorage.getItem("signaling");
-    if (savedData) {
-        let data = JSON.parse(savedData);
-        pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-    }
+async function startCall() {
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
+    
+    peerConnection = new RTCPeerConnection(config);
+    addTracks();
+
+    let offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.send(JSON.stringify({ offer: offer }));
 }
 
-startButton.onclick = async () => {
-    let stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localVideo.srcObject = stream;
-    stream.getTracks().forEach(track => pc.addTrack(track, stream));
-};
+function addTracks() {
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    peerConnection.ontrack = (event) => remoteVideo.srcObject = event.streams[0];
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) socket.send(JSON.stringify({ iceCandidate: event.candidate }));
+    };
+}
 
-pc.ontrack = (event) => {
-    remoteVideo.srcObject = event.streams[0];
-};
+startChat.onclick = startCall;

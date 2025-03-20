@@ -3,19 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Chat</title>
+    <title>Ome.tv Clone</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h1>WebRTC Chat</h1>
-    <button id="start">Start Chat</button>
-    <video id="localVideo" autoplay playsinline></video>
+    <h1>Random Video Chat</h1>
+    <video id="localVideo" autoplay playsinline muted></video>
     <video id="remoteVideo" autoplay playsinline></video>
+    <button id="startChat">Start Chat</button>
     <script src="/static/script.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js');
-        }
-    </script>
 </body>
 </html>

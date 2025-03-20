@@ -1,30 +1,36 @@
 from fastapi import FastAPI, WebSocket
-from fastapi.staticfiles import StaticFiles
-import asyncio
+from fastapi.middleware.cors import CORSMiddleware
+import json
 
 app = FastAPI()
 
-waiting_users = []  # In-memory matchmaking queue
+# Allow frontend to connect
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change this to your frontend URL for security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.websocket("/api/ws")
+clients = set()  # Store active WebSocket clients
+
+@app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    waiting_users.append(websocket)
+    clients.add(websocket)
 
-    if len(waiting_users) >= 2:
-        user1 = waiting_users.pop(0)
-        user2 = waiting_users.pop(0)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            message = json.loads(data)
 
-        await user1.send_json({"match": True})
-        await user2.send_json({"match": True})
+            # Relay offer/answer/ICE candidates to a random user
+            for client in clients:
+                if client != websocket:
+                    await client.send_text(json.dumps(message))
+                    break  # Send to one random user only
 
-        async def relay_messages(sender, receiver):
-            try:
-                while True:
-                    msg = await sender.receive_text()
-                    await receiver.send_text(msg)
-            except:
-                pass  # Ignore disconnects
-
-        asyncio.create_task(relay_messages(user1, user2))
-        asyncio.create_task(relay_messages(user2, user1))
+    except:
+        clients.remove(websocket)
+        await websocket.close()
