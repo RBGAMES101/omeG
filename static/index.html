@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmeG - Random Video Chat</title>
+    <title>Chatroulette Clone</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h1>OmeG - Random Video Chat</h1>
-    <video id="localVideo" autoplay playsinline></video>
-    <video id="remoteVideo" autoplay playsinline></video>
-    <button id="skipBtn">Skip</button>
+    <h1>Chatroulette Clone</h1>
+    <div id="videoContainer">
+        <video id="localVideo" autoplay playsinline muted></video>
+        <video id="remoteVideo" autoplay playsinline></video>
+    </div>
+    <button id="nextBtn">Next</button>
     <script src="/static/script.js"></script>
 </body>
 </html>

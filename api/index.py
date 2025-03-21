@@ -1,20 +1,20 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-import json
 import random
+import json
 
 app = FastAPI()
 
-# Enable CORS
+# Enable CORS to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Accept requests from all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-clients = []  # Stores active WebSocket clients waiting for a match
+clients = []  # Store WebSocket clients (users)
 pairs = {}  # Active WebRTC pairs
 
 
@@ -28,42 +28,42 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             message = json.loads(data)
 
-            # Match users randomly
+            # When the user wants to match with someone
             if message["type"] == "find":
                 if len(clients) > 1:
-                    # Find a random other client
                     clients.remove(websocket)
                     match = random.choice(clients)
                     clients.remove(match)
 
-                    # Store the pair
+                    # Create a WebRTC pair and notify both users
                     pairs[websocket] = match
                     pairs[match] = websocket
 
-                    # Notify both users they are paired
                     await websocket.send_text(json.dumps({"type": "match"}))
                     await match.send_text(json.dumps({"type": "match"}))
 
+            # Handle WebRTC signaling (offer/answer/ICE candidates)
             elif message["type"] in ["offer", "answer", "candidate"]:
-                # Forward WebRTC data to the paired user
                 if websocket in pairs:
                     await pairs[websocket].send_text(json.dumps(message))
 
-            elif message["type"] == "skip":
+            # Handle "next" (skip to new user)
+            elif message["type"] == "next":
                 if websocket in pairs:
                     other = pairs.pop(websocket)
                     pairs.pop(other, None)
-                    clients.append(other)  # Put back into queue
-                    await other.send_text(json.dumps({"type": "skip"}))
-                    await websocket.send_text(json.dumps({"type": "skip"}))
+                    clients.append(other)
+                    await other.send_text(json.dumps({"type": "next"}))
 
-                clients.append(websocket)  # Put back into queue for matching
+                clients.append(websocket)
+                socket.send(json.dumps({"type": "find"}))
 
     except:
+        # Clean up when the user disconnects
         if websocket in clients:
             clients.remove(websocket)
         if websocket in pairs:
             other = pairs.pop(websocket)
             pairs.pop(other, None)
-            clients.append(other)  # Put back into queue
+            clients.append(other)
         await websocket.close()

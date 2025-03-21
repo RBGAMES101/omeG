@@ -1,38 +1,47 @@
-const socket = new WebSocket("wss://" + window.location.host + "/ws");
+const socket = new WebSocket("ws://" + window.location.host + "/ws"); // Using ws:// instead of wss://
 
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
-const skipBtn = document.getElementById("skipBtn");
+const nextBtn = document.getElementById("nextBtn");
 
-const peerConnection = new RTCPeerConnection({
-    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-});
-
+let peerConnection;
 let matched = false;
 
-// Get camera & microphone
+// Set up ICE servers for WebRTC
+const config = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+};
+
+// Handle Media (Camera and Microphone)
 navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     .then(stream => {
         localVideo.srcObject = stream;
-        stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+        startWebRTC(stream);
     });
 
-peerConnection.ontrack = event => {
-    remoteVideo.srcObject = event.streams[0];
-};
+function startWebRTC(stream) {
+    peerConnection = new RTCPeerConnection(config);
 
-peerConnection.onicecandidate = event => {
-    if (event.candidate && matched) {
-        socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
-    }
-};
+    stream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, stream);
+    });
 
-// When WebSocket connects, request a match
+    peerConnection.ontrack = event => {
+        remoteVideo.srcObject = event.streams[0];
+    };
+
+    peerConnection.onicecandidate = event => {
+        if (event.candidate && matched) {
+            socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
+        }
+    };
+}
+
+// Handle WebSocket Messages (Matching & Signaling)
 socket.onopen = () => {
     socket.send(JSON.stringify({ type: "find" }));
 };
 
-// Handle WebSocket messages
 socket.onmessage = async (event) => {
     const message = JSON.parse(event.data);
 
@@ -58,41 +67,20 @@ socket.onmessage = async (event) => {
         await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
     }
 
-    if (message.type === "skip") {
+    if (message.type === "next") {
         resetCall();
         socket.send(JSON.stringify({ type: "find" }));
     }
 };
 
-// Skip button event
-skipBtn.onclick = () => {
-    socket.send(JSON.stringify({ type: "skip" }));
+// Handle "Next" Button
+nextBtn.onclick = () => {
+    socket.send(JSON.stringify({ type: "next" }));
 };
 
-// Reset connection when skipping
 function resetCall() {
     matched = false;
     peerConnection.close();
     remoteVideo.srcObject = null;
-
-    // Create a new connection
-    peerConnection = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-    });
-
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(stream => {
-            localVideo.srcObject = stream;
-            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-        });
-
-    peerConnection.ontrack = event => {
-        remoteVideo.srcObject = event.streams[0];
-    };
-
-    peerConnection.onicecandidate = event => {
-        if (event.candidate && matched) {
-            socket.send(JSON.stringify({ type: "candidate", candidate: event.candidate }));
-        }
-    };
+    startWebRTC(localVideo.srcObject);
 }
